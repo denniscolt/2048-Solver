@@ -1,4 +1,4 @@
-// Simple 2048 + Expectimax in the browser (configurable start)
+// 2048 + Expectimax with edit mode and manual spawn
 class RNG { constructor(seed){ this.s = seed ?? Math.floor(Math.random()*2**31); }
   next(){ let x = this.s|0; x ^= x<<13; x ^= x>>>17; x ^= x<<5; this.s = x|0; return (x>>>0)/2**32; } }
 
@@ -112,7 +112,7 @@ function expVal(g, depth, corner){
   return total;
 }
 
-// ---- UI
+// ---- UI & State
 const ui={
   elBoard: document.getElementById('board'),
   elScore: document.getElementById('score'),
@@ -126,9 +126,18 @@ const ui={
   btnStep: document.getElementById('btnStep'),
   btnAuto: document.getElementById('btnAuto'),
   btnStop: document.getElementById('btnStop'),
+  btnEdit: document.getElementById('btnEdit'),
+  btnDoneEdit: document.getElementById('btnDoneEdit'),
+  manualMode: document.getElementById('manualMode'),
+  spawnValue: document.getElementById('spawnValue'),
 };
 
-let state={ g:newBoard(), score:0, moves:0, rng:new RNG(), timer:null };
+let state={
+  g:newBoard(), score:0, moves:0, rng:new RNG(), timer:null,
+  edit:false, pendingSpawn:false,
+};
+
+const CYCLE=[0,2,4,8,16,32,64,128,256,512,1024,2048,4096];
 
 function parseCsv(csv){
   if(!csv) return null;
@@ -146,7 +155,7 @@ function reset(){
   state.g = start? clone(start): newBoard();
   let existing = 16 - emptyCells(state.g).length;
   while(existing<2){ if(!spawn(state.g, state.rng)) break; existing++; }
-  state.score=0; state.moves=0;
+  state.score=0; state.moves=0; state.pendingSpawn=false;
   draw(); setStatus('ready');
 }
 
@@ -155,28 +164,62 @@ function draw(){
   for(let r=0;r<4;r++) for(let c=0;c<4;c++){
     const v=state.g[r][c];
     const d=document.createElement('div');
-    d.className='cell v'+(v||0);
+    d.className='cell v'+(v||0)+(state.edit?' editable':'');
+    d.dataset.r=r; d.dataset.c=c;
     d.textContent=v||'';
+    d.onclick=(ev)=>onCellClick(ev, r, c);
     ui.elBoard.appendChild(d);
   }
   ui.elScore.textContent=state.score;
   ui.elMoves.textContent=state.moves;
+  ui.btnAuto.disabled = ui.manualMode.checked; // disable autoplay in manual mode
 }
 function setStatus(s){ ui.elStatus.textContent=s; }
 
+function cycleValue(v, backwards=false){
+  const i=CYCLE.indexOf(v);
+  if(i<0) return 0;
+  return CYCLE[(i + (backwards?-1:1) + CYCLE.length) % CYCLE.length];
+}
+
+function onCellClick(ev, r, c){
+  if(state.edit){
+    const backwards = ev.shiftKey;
+    state.g[r][c] = cycleValue(state.g[r][c], backwards);
+    draw();
+    return;
+  }
+  if(state.pendingSpawn && ui.manualMode.checked){
+    if(state.g[r][c]!==0){ setStatus('pick an empty cell'); return; }
+    const val=parseInt(ui.spawnValue.value,10)||2;
+    state.g[r][c]=val;
+    state.pendingSpawn=false;
+    setStatus('spawn placed');
+    draw();
+  }
+}
+
 function step(){
+  if(state.edit){ setStatus('finish editing first'); return; }
+  if(state.pendingSpawn && ui.manualMode.checked){ setStatus('place the spawn tile'); return; }
   if(!canMove(state.g)){ setStatus('game over'); return; }
   const depth=Math.max(1, Math.min(8, parseInt(ui.elDepth.value,10)||4));
   const corner=ui.elCorner.value||'BL';
   const [mv]=bestMove(state.g, depth, corner);
   const [g2,sc,moved]=MOVE_FUNS[mv](state.g);
-  if(!moved){ setStatus('no-op, trying next'); return; }
+  if(!moved){ setStatus('no-op'); return; }
   state.g=g2; state.score+=sc; state.moves++;
-  spawn(state.g, state.rng);
+  if(ui.manualMode.checked){
+    state.pendingSpawn=true;
+    setStatus('manual spawn: click an empty cell');
+  }else{
+    spawn(state.g, state.rng);
+  }
   draw();
 }
 
 function auto(){
+  if(ui.manualMode.checked){ setStatus('disable manual spawn to autoplay'); return; }
   if(state.timer) return;
   setStatus('autoplay');
   state.timer=setInterval(()=>{
@@ -191,14 +234,25 @@ ui.btnStep.onclick=()=> step();
 ui.btnAuto.onclick=()=> auto();
 ui.btnStop.onclick=()=> stop();
 
+ui.btnEdit.onclick=()=>{ state.edit=true; setStatus('editing — click cells to cycle values (Shift=back)'); draw(); };
+ui.btnDoneEdit.onclick=()=>{ state.edit=false; setStatus('ready'); draw(); };
+
 // Keyboard support
 window.addEventListener('keydown', (e)=>{
+  if(state.edit) return; // disable during edit
   const map={ArrowUp:"U",ArrowDown:"D",ArrowLeft:"L",ArrowRight:"R"};
-  const mv=map[e.key]; if(!mv) return;
+  const mv=map[e.key];
+  if(!mv) return;
+  if(state.pendingSpawn && ui.manualMode.checked){ setStatus('place the spawn tile'); return; }
   const [g2,sc,moved]=MOVE_FUNS[mv](state.g);
   if(!moved) return;
   state.g=g2; state.score+=sc; state.moves++;
-  spawn(state.g, state.rng);
+  if(ui.manualMode.checked){
+    state.pendingSpawn=true;
+    setStatus('manual spawn: click an empty cell');
+  }else{
+    spawn(state.g, state.rng);
+  }
   draw();
 });
 

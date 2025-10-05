@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>2048 Expectimax (Configurable Start)</title>
+  <title>2048 Expectimax (Configurable Start + Manual)</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="wrap">
     <header>
       <h1>2048 Expectimax</h1>
-      <p class="sub">Web UI inspired by nneonneo's expectimax approach.</p>
+      <p class="sub">Configurable start, <strong>in-place board editing</strong>, and optional <strong>manual spawn</strong>.</p>
     </header>
 
     <section class="controls">
@@ -31,11 +31,26 @@
         <label>Seed:</label>
         <input id="seed" type="number" placeholder="(optional)" />
       </div>
+
       <div class="row">
         <button id="btnNew">New Game</button>
         <button id="btnStep">Step</button>
         <button id="btnAuto">Auto Play</button>
         <button id="btnStop" class="ghost">Stop</button>
+      </div>
+
+      <div class="row">
+        <button id="btnEdit">Edit Board</button>
+        <button id="btnDoneEdit" class="ghost">Done Editing</button>
+        <label class="spacer"></label>
+        <label><input type="checkbox" id="manualMode" /> Manual spawn</label>
+        <label>Tile:</label>
+        <select id="spawnValue">
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="8">8</option>
+          <option value="16">16</option>
+        </select>
       </div>
     </section>
 
@@ -48,7 +63,7 @@
     <section class="board" id="board"></section>
 
     <footer>
-      <p>Heuristics: empties, smoothness, monotonicity toward a corner, max-on-corner bonus.</p>
+      <p>Tips: Edit mode — click a cell to cycle 0→2→4→8→… (Shift+click goes backward). Manual spawn — after each move, click an empty cell to place the selected tile.</p>
       <p>Reference: <a href="https://stackoverflow.com/questions/22342854/what-is-the-optimal-algorithm-for-the-game-2048/22389702#22389702" target="_blank">Stack Overflow: Expectimax 2048</a></p>
     </footer>
   </div>
