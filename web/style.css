@@ -1,7 +1,8 @@
 :root { --tile: 96px; --gap: 12px; --radius: 12px; }
 *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-body{background:#111;color:#eee;display:flex;justify-content:center;padding:24px}
-.wrap{max-width:620px;width:100%}
+html,body{height:100%}
+body{background:#111;color:#eee;display:flex;justify-content:center;padding:24px;margin:0}
+.wrap{max-width:620px;width:100%;position:relative}
 header h1{margin:0 0 4px;font-size:28px}
 .sub{margin:0 0 12px;color:#bbb}
 .controls{background:#1b1b1b;border:1px solid #2a2a2a;border-radius:12px;padding:12px;margin-bottom:12px}
@@ -11,8 +12,8 @@ header h1{margin:0 0 4px;font-size:28px}
 .controls button.ghost{opacity:.6}
 .controls .spacer{flex:1}
 .hud{display:flex;gap:16px;margin:8px 0 12px;color:#bbb}
-.board{display:grid;grid-template-columns:repeat(4,var(--tile));gap:var(--gap);padding:var(--gap);background:#1b1b1b;border-radius:var(--radius);border:1px solid #2a2a2a}
-.cell{width:var(--tile);height:var(--tile);display:flex;align-items:center;justify-content:center;border-radius:10px;font-weight:700;font-size:22px;background:#202020;color:#ddd;user-select:none;cursor:default}
+.board{display:grid;grid-template-columns:repeat(4,var(--tile));gap:var(--gap);padding:var(--gap);background:#1b1b1b;border-radius:var(--radius);border:1px solid #2a2a2a;position:relative;z-index:5;touch-action:manipulation}
+.cell{width:var(--tile);height:var(--tile);display:flex;align-items:center;justify-content:center;border-radius:10px;font-weight:700;font-size:22px;background:#202020;color:#ddd;user-select:none;cursor:default;-webkit-tap-highlight-color:transparent}
 .cell.editable{outline:2px dashed #555; cursor:pointer}
 .cell.v0{background:#171717;color:#333}
 .cell.v2{background:#eee;color:#333}
@@ -27,3 +28,4 @@ header h1{margin:0 0 4px;font-size:28px}
 .cell.v1024{background:#edc53f;font-size:18px}
 .cell.v2048{background:#edc22e;font-size:18px}
 .cell.v4096, .cell.v8192{background:#3c3a32;color:#f9f5f0}
+.banner{position:absolute;left:0;right:0;top:0;transform:translateY(-10px);background:#2a2a2a;border:1px solid #3a3a3a;color:#eee;padding:8px 12px;border-radius:10px;text-align:center;z-index:10}

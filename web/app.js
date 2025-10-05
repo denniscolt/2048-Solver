@@ -1,8 +1,8 @@
-// 2048 + Expectimax with edit mode and manual spawn
+// Expectimax 2048 (Edit mode patch with event delegation + touch-friendly)
 class RNG { constructor(seed){ this.s = seed ?? Math.floor(Math.random()*2**31); }
   next(){ let x = this.s|0; x ^= x<<13; x ^= x>>>17; x ^= x<<5; this.s = x|0; return (x>>>0)/2**32; } }
 
-const MOVES = ["U","D","L","R"]; const SIZE = 4;
+const MOVES = ["U","D","L","R"];
 
 function newBoard(){ return Array.from({length:4},()=>[0,0,0,0]); }
 function emptyCells(g){ const out=[]; for(let r=0;r<4;r++) for(let c=0;c<4;c++) if(!g[r][c]) out.push([r,c]); return out; }
@@ -80,7 +80,7 @@ function hscore(g, corner){
 // ---- Expectimax
 function bestMove(g, depth, corner){
   let best="L", val=-Infinity;
-  for(const m of MOVES){
+  for(const m of ["U","D","L","R"]){
     const [g2,_,moved]=MOVE_FUNS[m](g);
     if(!moved) continue;
     const v=expVal(g2, depth-1, corner);
@@ -91,7 +91,7 @@ function bestMove(g, depth, corner){
 function maxVal(g, depth, corner){
   if(depth===0 || !canMove(g)) return hscore(g,corner);
   let v=-Infinity;
-  for(const m of MOVES){
+  for(const m of ["U","D","L","R"]){
     const [g2,_,moved]=MOVE_FUNS[m](g);
     if(!moved) continue;
     v=Math.max(v, expVal(g2, depth-1, corner));
@@ -130,6 +130,7 @@ const ui={
   btnDoneEdit: document.getElementById('btnDoneEdit'),
   manualMode: document.getElementById('manualMode'),
   spawnValue: document.getElementById('spawnValue'),
+  banner: document.getElementById('editBanner'),
 };
 
 let state={
@@ -167,12 +168,12 @@ function draw(){
     d.className='cell v'+(v||0)+(state.edit?' editable':'');
     d.dataset.r=r; d.dataset.c=c;
     d.textContent=v||'';
-    d.onclick=(ev)=>onCellClick(ev, r, c);
     ui.elBoard.appendChild(d);
   }
   ui.elScore.textContent=state.score;
   ui.elMoves.textContent=state.moves;
-  ui.btnAuto.disabled = ui.manualMode.checked; // disable autoplay in manual mode
+  ui.btnAuto.disabled = ui.manualMode.checked;
+  ui.banner.hidden = !state.edit;
 }
 function setStatus(s){ ui.elStatus.textContent=s; }
 
@@ -182,7 +183,14 @@ function cycleValue(v, backwards=false){
   return CYCLE[(i + (backwards?-1:1) + CYCLE.length) % CYCLE.length];
 }
 
-function onCellClick(ev, r, c){
+// Event delegation for faster, more reliable clicks/taps
+ui.elBoard.addEventListener('click', (ev)=>{
+  const cell = ev.target.closest('.cell');
+  if(!cell) return;
+  const r = parseInt(cell.dataset.r,10);
+  const c = parseInt(cell.dataset.c,10);
+  if(Number.isNaN(r) || Number.isNaN(c)) return;
+
   if(state.edit){
     const backwards = ev.shiftKey;
     state.g[r][c] = cycleValue(state.g[r][c], backwards);
@@ -197,7 +205,7 @@ function onCellClick(ev, r, c){
     setStatus('spawn placed');
     draw();
   }
-}
+}, {passive:true});
 
 function step(){
   if(state.edit){ setStatus('finish editing first'); return; }
@@ -234,12 +242,12 @@ ui.btnStep.onclick=()=> step();
 ui.btnAuto.onclick=()=> auto();
 ui.btnStop.onclick=()=> stop();
 
-ui.btnEdit.onclick=()=>{ state.edit=true; setStatus('editing — click cells to cycle values (Shift=back)'); draw(); };
+ui.btnEdit.onclick=()=>{ state.edit=true; setStatus('editing — click tiles to cycle values (Shift=back)'); draw(); };
 ui.btnDoneEdit.onclick=()=>{ state.edit=false; setStatus('ready'); draw(); };
 
-// Keyboard support
+// Keyboard support for moves (disabled during edit)
 window.addEventListener('keydown', (e)=>{
-  if(state.edit) return; // disable during edit
+  if(state.edit) return;
   const map={ArrowUp:"U",ArrowDown:"D",ArrowLeft:"L",ArrowRight:"R"};
   const mv=map[e.key];
   if(!mv) return;
@@ -254,6 +262,6 @@ window.addEventListener('keydown', (e)=>{
     spawn(state.g, state.rng);
   }
   draw();
-});
+}, {passive:true});
 
 reset();
